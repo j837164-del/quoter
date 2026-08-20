@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trip & Transfer Quote Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen pb-28 md:pb-8">
+
+  <div class="max-w-xl mx-auto p-4 sm:p-6">
+    
+    <!-- Header -->
+    <div class="mb-5 text-center sm:text-left">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Trip & Transfer Quotes</h1>
+      <p class="text-xs sm:text-sm text-gray-500">Instant rate lookup for Banff & surrounding transfers.</p>
+    </div>
+
+    <!-- Product Segmented Control -->
+    <div class="mb-5 bg-gray-200 p-1 rounded-xl grid grid-cols-3 gap-1">
+      <button id="btn-transfer" onclick="setProductType('transfer')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm">Transfers</button>
+      <button id="btn-tour" onclick="setProductType('tour')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all text-gray-600 hover:text-gray-900">Tours</button>
+      <button id="btn-package" onclick="setProductType('package')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all text-gray-600 hover:text-gray-900">Packages</button>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 p-4 sm:p-6 space-y-4">
+      
+      <!-- Route Selection -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="origin-select" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Pickup (From)</label>
+          <select id="origin-select" onchange="onOriginChange()" class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none capitalize">
+          </select>
+        </div>
+
+        <div>
+          <label for="dest-select" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Destination (To)</label>
+          <select id="dest-select" onchange="calculateQuote()" class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </select>
+        </div>
+      </div>
+
+      <!-- Vehicle Selection -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Vehicle Type</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="veh-taxi" onclick="setVehicle('taxi')" class="py-2 px-1 text-center border-2 border-blue-600 bg-blue-50 text-blue-700 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">TAXI</div>
+            <div class="text-[10px] text-blue-500">1-4 Pax</div>
+          </button>
+          <button id="veh-suv" onclick="setVehicle('suv')" class="py-2 px-1 text-center border-2 border-gray-200 bg-white text-gray-600 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">SUV / FSV</div>
+            <div class="text-[10px] text-gray-400">1-6 Pax</div>
+          </button>
+          <button id="veh-bus24" onclick="setVehicle('bus24')" class="py-2 px-1 text-center border-2 border-gray-200 bg-white text-gray-600 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">24 BUS</div>
+            <div class="text-[10px] text-gray-400">1-24 Pax</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Passengers & Extras -->
+      <div class="grid grid-cols-2 gap-4 pt-2">
+        <div>
+          <label for="pax-input" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Passengers</label>
+          <input type="number" id="pax-input" min="1" max="24" value="2" onchange="onPaxChange()" class="w-full h-11 px-3 border border-gray-300 rounded-xl text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label for="wait-time" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Wait Time (Hrs)</label>
+          <input type="number" id="wait-time" min="0" step="0.5" value="0" onchange="calculateQuote()" class="w-full h-11 px-3 border border-gray-300 rounded-xl text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Footer / Desktop Card Footer -->
+  <div class="fixed bottom-0 left-0 right-0 md:relative md:max-w-xl md:mx-auto md:px-6 bg-white border-t border-gray-200 md:border-0 md:bg-transparent shadow-lg md:shadow-none p-4 z-50">
+    <div class="bg-gray-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl">
+      <div>
+        <div class="text-[10px] uppercase font-bold tracking-wider text-gray-400">Estimated Total</div>
+        <div id="quote-notes" class="text-xs text-gray-300 truncate max-w-[180px] sm:max-w-xs">Select route</div>
+      </div>
+      <div id="quote-display" class="text-2xl sm:text-3xl font-black text-green-400">$0.00</div>
+    </div>
+  </div>
+
+  <script>
+    const dataset = {
+      "hourly_rates": { "taxi": 100, "suv": 100, "bus24": 150 },
+      "products": [
+        {"product_type":"tour","from":"banff","to":"BANFF SIGHTSEEING PER HOUR","prices":{"taxi":100,"suv":175,"bus24":200}},
+        {"product_type":"tour","from":"banff","to":"BANFF SIGHTSEEING HALF DAY (4 HRS)","prices":{"taxi":350,"suv":550,"bus24":600}},
+        {"product_type":"transfer","from":"banff","to":"BAKER CREEK","prices":{"taxi":125,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"BANKHEAD","prices":{"taxi":40,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"BOURGEAU LAKE TRAILHEAD","prices":{"taxi":60,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"BOW LAKE NUMTLIAH LODGE","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"BRAGG CREEK","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"CALGARY","prices":{"taxi":300,"suv":425,"bus24":600}},
+        {"product_type":"transfer","from":"yyc","to":"CALGARY AIRPORT TO BANFF","prices":{"taxi":330,"suv":450,"bus24":650}},
+        {"product_type":"transfer","from":"calgary","to":"CALGARY TO KANANASKIS","prices":{"taxi":350,"suv":475,"bus24":700}},
+        {"product_type":"transfer","from":"calgary","to":"CALGARY TO LAKE LOUISE","prices":{"taxi":450,"suv":625,"bus24":800}},
+        {"product_type":"transfer","from":"banff","to":"CALGARY RETURN (MAX 30 MIN WAIT)","prices":{"taxi":450,"suv":625,"bus24":800}},
+        {"product_type":"transfer","from":"banff","to":"CANMORE","prices":{"taxi":85,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"CASTLE JCT","prices":{"taxi":95,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"COCHRANE","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"CORY PASS","prices":{"taxi":45,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"COLUMBIA ICEFIELD (8 HRS MAX)","prices":{"taxi":575,"suv":800,"bus24":1150}},
+        {"product_type":"transfer","from":"banff","to":"COLUMBIA ICEFIELD (TRANSFER ONLY)","prices":{"taxi":450,"suv":625,"bus24":800}},
+        {"product_type":"transfer","from":"banff","to":"COLUMBIA ICEFIELD (DROP IN JASPER)","prices":{"taxi":750,"suv":950,"bus24":1250}},
+        {"product_type":"transfer","from":"banff","to":"DEADMAN'S FLATS","prices":{"taxi":95,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"EDMONTON","prices":{"taxi":700,"suv":900,"bus24":1200}},
+        {"product_type":"transfer","from":"banff","to":"EMERALD LAKE","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"ENGADINE LODGE (SPRAY LAKE RD)","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"EXSHAW","prices":{"taxi":125,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"FIELD","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"FIRESIDE (1A-BOW VALLEY PARKWAY)","prices":{"taxi":45,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"GOAT CREEK","prices":{"taxi":125,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"GOLDEN (KICKING HORSE SKI)","prices":{"taxi":300,"suv":425,"bus24":600}},
+        {"product_type":"transfer","from":"banff","to":"HARVIE HEIGHTS / PARK GATE","prices":{"taxi":75,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"HEALY CREEK (BASE OF SUNSHINE RD)","prices":{"taxi":55,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"JAMIESON ROAD ARMY BARRACKS","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"JOHNSON LAKE","prices":{"taxi":55,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"JOHNSTON CANYON","prices":{"taxi":85,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"JASPER (TRANSFER ONLY)","prices":{"taxi":550,"suv":700,"bus24":1000}},
+        {"product_type":"transfer","from":"banff","to":"KANANASKIS VILLAGE (HOTELS)","prices":{"taxi":200,"suv":300,"bus24":450}},
+        {"product_type":"transfer","from":"banff","to":"KANANASKIS GUEST RANCH/GOLF COURSE","prices":{"taxi":175,"suv":250,"bus24":400}},
+        {"product_type":"transfer","from":"banff","to":"LAC DES ARCS","prices":{"taxi":125,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"lake louise","to":"LAKE LOUISE TO CALGARY","prices":{"taxi":425,"suv":600,"bus24":750}},
+        {"product_type":"transfer","from":"banff","to":"LAKE LOUISE","prices":{"taxi":185,"suv":250,"bus24":400}},
+        {"product_type":"tour","from":"banff","to":"LAKE LOUISE TOUR (3HRS FROM BANFF)","prices":{"taxi":300,"suv":425,"bus24":600}},
+        {"product_type":"transfer","from":"banff","to":"LAKE MINNEWANKA","prices":{"taxi":55,"suv":150,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"LAKE O'HARA / GREAT DIVIDE","prices":{"taxi":200,"suv":300,"bus24":450}},
+        {"product_type":"transfer","from":"banff","to":"MINI THNI NAKODA LODGE (1A)","prices":{"taxi":200,"suv":300,"bus24":450}},
+        {"product_type":"transfer","from":"banff","to":"MORAINE LAKE","prices":{"taxi":-1,"suv":-1,"bus24":-1}},
+        {"product_type":"transfer","from":"banff","to":"MOUNT SHARK HELIPAD","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"NAKODA CASINO","prices":{"taxi":175,"suv":250,"bus24":400}},
+        {"product_type":"transfer","from":"banff","to":"RADIUM HOT SPRINGS","prices":{"taxi":300,"suv":425,"bus24":600}},
+        {"product_type":"transfer","from":"banff","to":"RAFTER SIX RANCH","prices":{"taxi":150,"suv":225,"bus24":400}},
+        {"product_type":"transfer","from":"banff","to":"RED EARTH CREEK","prices":{"taxi":85,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"SASKATCHEWAN RIVER CROSSING","prices":{"taxi":250,"suv":375,"bus24":550}},
+        {"product_type":"transfer","from":"banff","to":"SEEBE","prices":{"taxi":150,"suv":225,"bus24":400}},
+        {"product_type":"transfer","from":"banff","to":"STORM MOUNTAIN LODGE","prices":{"taxi":100,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"TWO JACK LAKE / CAMP","prices":{"taxi":55,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"banff","to":"LAKE LOUISE SKI HILL","prices":{"taxi":185,"suv":250,"bus24":400}},
+        {"product_type":"transfer","from":"banff","to":"MOUNT NORQUAY","prices":{"taxi":55,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"norquay","to":"MOUNT NORQUAY TO CANMORE","prices":{"taxi":125,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"norquay","to":"MOUNT NORQUAY TO LAKE LOUISE","prices":{"taxi":225,"suv":350,"bus24":475}},
+        {"product_type":"transfer","from":"banff","to":"SUNSHINE VILLAGE","prices":{"taxi":85,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"sunshine","to":"SUNSHINE VILLAGE TO LOUISE","prices":{"taxi":225,"suv":350,"bus24":475}},
+        {"product_type":"transfer","from":"sunshine","to":"SUNSHINE VILLAGE TO CANMORE","prices":{"taxi":150,"suv":225,"bus24":400}},
+        {"product_type":"transfer","from":"sunshine","to":"SUNSHINE VILLAGE TO NORQUAY","prices":{"taxi":125,"suv":175,"bus24":250}},
+        {"product_type":"transfer","from":"sunshine","to":"SUNSHINE VILLAGE TO CALGARY","prices":{"taxi":350,"suv":475,"bus24":700}},
+        {"product_type":"transfer","from":"banff","to":"KICKING HORSE SKI RESORT (GOLDEN)","prices":{"taxi":325,"suv":425,"bus24":600}},
+        {"product_type":"transfer","from":"banff","to":"PANORAMA SKI AREA","prices":{"taxi":375,"suv":525,"bus24":675}},
+        {"product_type":"transfer","from":"banff","to":"NAKISKA (KANANASKIS)","prices":{"taxi":250,"suv":375,"bus24":550}}
+      ]
+    };
+
+    let activeType = 'transfer';
+    let activeVehicle = 'taxi';
+
+    function setProductType(type) {
+      activeType = type;
+      ['transfer', 'tour', 'package'].forEach(t => {
+        const btn = document.getElementById(`btn-${t}`);
+        if (t === type) {
+          btn.className = "py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm";
+        } else {
+          btn.className = "py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all text-gray-600 hover:text-gray-900";
+        }
+      });
+
+      if (type === 'package') {
+        renderPackages();
+      } else {
+        populateOrigins();
+      }
+    }
+
+    function setVehicle(v) {
+      activeVehicle = v;
+      ['taxi', 'suv', 'bus24'].forEach(tier => {
+        const btn = document.getElementById(`veh-${tier}`);
+        if (tier === v) {
+          btn.className = "py-2 px-1 text-center border-2 border-blue-600 bg-blue-50 text-blue-700 rounded-xl font-medium text-xs sm:text-sm transition-all";
+        } else {
+          btn.className = "py-2 px-1 text-center border-2 border-gray-200 bg-white text-gray-600 rounded-xl font-medium text-xs sm:text-sm transition-all";
+        }
+      });
+      calculateQuote();
+    }
+
+    function populateOrigins() {
+      const originSelect = document.getElementById('origin-select');
+      const filtered = dataset.products.filter(p => p.product_type === activeType);
+      const origins = [...new Set(filtered.map(p => p.from))];
+
+      originSelect.innerHTML = '';
+      origins.forEach(origin => {
+        const opt = document.createElement('option');
+        opt.value = origin;
+        opt.textContent = origin.toUpperCase();
+        originSelect.appendChild(opt);
+      });
+
+      onOriginChange();
+    }
+
+    function onOriginChange() {
+      const selectedOrigin = document.getElementById('origin-select').value;
+      const destSelect = document.getElementById('dest-select');
+      const filtered = dataset.products.filter(p => p.product_type === activeType && p.from === selectedOrigin);
+
+      destSelect.innerHTML = '';
+      filtered.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.to;
+        opt.textContent = p.to;
+        destSelect.appendChild(opt);
+      });
+
+      calculateQuote();
+    }
+
+    function onPaxChange() {
+      const pax = parseInt(document.getElementById('pax-input').value) || 1;
+      if (pax <= 4) setVehicle('taxi');
+      else if (pax <= 6) setVehicle('suv');
+      else setVehicle('bus24');
+    }
+
+    function calculateQuote() {
+      if (activeType === 'package') return;
+
+      const origin = document.getElementById('origin-select').value;
+      const dest = document.getElementById('dest-select').value;
+      const waitHours = parseFloat(document.getElementById('wait-time').value) || 0;
+
+      const product = dataset.products.find(p => p.product_type === activeType && p.from === origin && p.to === dest);
+      const quoteDisplay = document.getElementById('quote-display');
+      const quoteNotes = document.getElementById('quote-notes');
+
+      if (!product || product.prices[activeVehicle] === undefined) {
+        quoteDisplay.textContent = 'N/A';
+        quoteNotes.textContent = 'Route unavailable';
+        return;
+      }
+
+      const basePrice = product.prices[activeVehicle];
+
+      if (basePrice === -1) {
+        quoteDisplay.textContent = 'Manual';
+        quoteNotes.textContent = 'Moraine Lake (Call Dispatch)';
+        return;
+      }
+
+      const waitRate = dataset.hourly_rates[activeVehicle] || 100;
+      const total = basePrice + (waitHours * waitRate);
+
+      quoteDisplay.textContent = `$${total.toFixed(0)}`;
+      quoteNotes.textContent = waitHours > 0 
+        ? `$${basePrice} base + ${waitHours}h wait` 
+        : `${activeVehicle.toUpperCase()} Flat Rate`;
+    }
+
+    function renderPackages() {
+      document.getElementById('origin-select').innerHTML = '<option>Custom Location</option>';
+      document.getElementById('dest-select').innerHTML = '<option>Wedding / Event Package</option>';
+      document.getElementById('quote-display').textContent = 'Custom';
+      document.getElementById('quote-notes').textContent = 'Contact sales for package rates';
+    }
+
+    populateOrigins();
+  </script>
+</body>
+</html>
