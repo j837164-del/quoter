@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><!--41c5474c-0c93-31f4-9a56-2e5de319bd9d-->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trip & Transfer Quote Engine</title>
+ <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+  <script src="quoter.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen pb-28 md:pb-8">
+
+  <div class="max-w-xl mx-auto p-4 sm:p-6">
+    
+    <!-- Header -->
+    <div class="mb-5 text-center sm:text-left">
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Trip & Transfer Quotes</h1>
+      <p class="text-xs sm:text-sm text-gray-500">Instant rate lookup for Banff & surrounding transfers.</p>
+    </div>
+
+    <!-- Product Segmented Control -->
+    <div class="mb-5 bg-gray-200 p-1 rounded-xl grid grid-cols-3 gap-1">
+      <button id="btn-transfer" onclick="setProductType('transfer')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm">Transfers</button>
+      <button id="btn-tour" onclick="setProductType('tour')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all text-gray-600 hover:text-gray-900">Tours</button>
+      <button id="btn-package" onclick="setProductType('package')" class="py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all text-gray-600 hover:text-gray-900">Packages</button>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 p-4 sm:p-6 space-y-5">
+      
+      <!-- Route Selection Grid -->
+<div class="space-y-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+    
+    <!-- Origin Field -->
+    <div>
+      <label for="origin-select" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Pickup (From)</label>
+      <select id="origin-select" onchange="calculateQuote()" class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none capitalize">
+      </select>
+    </div>
+
+    <!-- Destination Field -->
+    <div>
+      <label for="dest-select" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Destination (To)</label>
+      <select id="dest-select" onchange="calculateQuote()" class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none capitalize">
+      </select>
+    </div>
+  </div>
+
+  <!-- Quick Options Row -->
+  <div class="pt-2 flex items-center justify-end gap-5 border-t border-gray-100 text-xs font-medium text-gray-700">
+    <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+      <input type="checkbox" id="isReturn" onchange="calculateQuote()" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
+      <span>Return Trip</span>
+    </label>
+    <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+      <input type="checkbox" id="isQuickReturn" onchange="onQuickTurnToggle()" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
+      <span>Quick Turn (&lt;30m)</span>
+    </label>
+  </div>
+</div>
+
+      <hr class="border-gray-100">
+
+      <!-- Vehicle Selection -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Vehicle Type</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="veh-taxi" onclick="setVehicle('taxi')" class="py-2 px-1 text-center border-2 border-blue-600 bg-blue-50 text-blue-700 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">TAXI</div>
+            <div class="text-[10px] text-blue-500">1-4 Pax</div>
+          </button>
+          <button id="veh-suv" onclick="setVehicle('suv')" class="py-2 px-1 text-center border-2 border-gray-200 bg-white text-gray-600 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">SUV / FSV</div>
+            <div class="text-[10px] text-gray-400">1-6 Pax</div>
+          </button>
+          <button id="veh-bus24" onclick="setVehicle('bus24')" class="py-2 px-1 text-center border-2 border-gray-200 bg-white text-gray-600 rounded-xl font-medium text-xs sm:text-sm transition-all">
+            <div class="font-bold">24 BUS</div>
+            <div class="text-[10px] text-gray-400">1-24 Pax</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Passengers & Extras -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="pax-input" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Passengers</label>
+          <input type="number" id="pax-input" min="1" max="24" value="2" onchange="onPaxChange()" class="w-full h-11 px-3 border border-gray-300 rounded-xl text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label for="wait-time" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Wait Time (Hrs)</label>
+          <input type="number" id="wait-time" min="0" step="0.5" value="0" onchange="calculateQuote()" class="w-full h-11 px-3 border border-gray-300 rounded-xl text-base text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Footer / Desktop Card Footer -->
+  <div class="fixed bottom-0 left-0 right-0 md:relative md:max-w-xl md:mx-auto md:px-6 bg-white border-t border-gray-200 md:border-0 md:bg-transparent shadow-lg md:shadow-none p-4 z-50">
+    <div class="bg-gray-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-xl">
+      <div>
+        <div class="text-[10px] uppercase font-bold tracking-wider text-gray-400">Estimated Total</div>
+        <div id="quote-notes" class="text-xs text-gray-300 truncate max-w-[180px] sm:max-w-xs">Select route</div>
+      </div>
+      <div id="quote-display" class="text-2xl sm:text-3xl font-black text-green-400">$0.00</div>
+    </div>
+  </div>
+
+  <script>
+    populateAtomicDropdowns();
+  </script>
+</body>
+</html>
